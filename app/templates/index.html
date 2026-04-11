@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VietPlateVision Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="left-sidebar">
+            <div class="brand-block">
+                <div class="brand-title">VIETPLATEVISION</div>
+                <div class="brand-subtitle">ANPR TRADING DESK</div>
+            </div>
+
+            <div class="panel-title">Source Selector</div>
+            <div class="source-tabs" id="source-tabs">
+                <button class="source-tab active" data-source="image">Image</button>
+                <button class="source-tab" data-source="video">Video</button>
+                <button class="source-tab" data-source="stream">Stream</button>
+                <button class="source-tab" data-source="webcam">Webcam</button>
+            </div>
+
+            <section class="control-panel active" data-panel="image">
+                <label>Image File</label>
+                <input type="file" id="image-file" accept="image/*" />
+                <button id="image-submit">Process Image</button>
+            </section>
+
+            <section class="control-panel" data-panel="video">
+                <label>Video File</label>
+                <input type="file" id="video-file" accept="video/*" />
+                <label>Sample Interval (frame)</label>
+                <input type="number" id="video-interval" min="1" value="5" />
+                <button id="video-submit">Start Video Job</button>
+            </section>
+
+            <section class="control-panel" data-panel="stream">
+                <label>Stream URL (RTSP/HTTP)</label>
+                <input type="text" id="stream-url" placeholder="rtsp://user:pass@ip:554/stream" />
+                <label>Alias</label>
+                <input type="text" id="stream-name" value="gate-cam" />
+                <label>Sample Interval (frame)</label>
+                <input type="number" id="stream-interval" min="1" value="5" />
+                <button id="stream-submit">Start Stream Job</button>
+            </section>
+
+            <section class="control-panel" data-panel="webcam">
+                <label>Webcam Index</label>
+                <input type="number" id="webcam-index" min="0" value="0" />
+                <label>Sample Interval (frame)</label>
+                <input type="number" id="webcam-interval" min="1" value="5" />
+                <button id="webcam-submit">Start Webcam Job</button>
+            </section>
+
+            <div class="panel-title">Runtime Jobs</div>
+            <div class="jobs-list" id="jobs-list"></div>
+            <div class="status-bar" id="status-text">Idle.</div>
+        </aside>
+
+        <main class="main-panel">
+            <header class="main-header">
+                <div>Realtime Detection Feed</div>
+                <button id="refresh-button">Refresh Jobs</button>
+            </header>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time (UTC)</th>
+                            <th>Source</th>
+                            <th>Plate</th>
+                            <th>Confidence</th>
+                            <th>Edge</th>
+                            <th>Crop</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </main>
+
+        <aside class="right-panel">
+            <div class="panel-title">Detection Detail</div>
+            <div class="detail-card" id="detail-card">
+                <div class="detail-placeholder">Select a row from history table.</div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

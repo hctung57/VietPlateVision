@@ -1,0 +1,267 @@
+:root {
+    --bg: #14181d;
+    --panel: #1c222b;
+    --panel-soft: #202834;
+    --line: #2e3949;
+    --text-main: #f1f5f9;
+    --text-sub: #9aa7b8;
+    --accent: #2f81f7;
+    --positive: #30d158;
+    --negative: #ff5d73;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle at top right, #1f2a3a 0%, var(--bg) 45%);
+    color: var(--text-main);
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.015em;
+}
+
+button,
+input {
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.app-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 300px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+}
+
+.left-sidebar,
+.main-panel,
+.right-panel {
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, #1d252f 0%, var(--panel) 100%);
+}
+
+.left-sidebar {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.brand-block {
+    border: 1px solid #374455;
+    padding: 10px;
+    background: #151c25;
+}
+
+.brand-title {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14px;
+    color: #d8e3f2;
+}
+
+.brand-subtitle {
+    color: var(--text-sub);
+    font-size: 11px;
+}
+
+.panel-title {
+    color: #72aefc;
+    text-transform: uppercase;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+}
+
+.source-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+}
+
+.source-tab,
+button {
+    border: 1px solid #35465d;
+    background: #18212d;
+    color: #c8d3e3;
+    padding: 7px;
+    cursor: pointer;
+}
+
+.source-tab.active,
+button:hover {
+    border-color: var(--accent);
+    color: #e9f3ff;
+}
+
+.control-panel {
+    display: none;
+    border: 1px solid var(--line);
+    background: var(--panel-soft);
+    padding: 8px;
+    gap: 6px;
+    flex-direction: column;
+}
+
+.control-panel.active {
+    display: flex;
+}
+
+input {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: #131922;
+    color: var(--text-main);
+    padding: 7px;
+}
+
+.jobs-list {
+    border: 1px solid var(--line);
+    background: #141a23;
+    min-height: 130px;
+    max-height: 220px;
+    overflow: auto;
+}
+
+.job-row {
+    border-bottom: 1px solid #253244;
+    padding: 6px;
+}
+
+.job-row strong {
+    color: #dce7f8;
+}
+
+.status-bar {
+    border: 1px solid #31415b;
+    padding: 8px;
+    background: #131a23;
+    color: #a8c8f7;
+}
+
+.main-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.main-header {
+    border-bottom: 1px solid var(--line);
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #c7d7ed;
+}
+
+.table-wrap {
+    overflow: auto;
+    height: calc(100vh - 66px);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background: #19212b;
+    z-index: 2;
+}
+
+th,
+td {
+    border-right: 1px solid #2a3647;
+    border-bottom: 1px solid #2a3647;
+    padding: 5px 8px;
+    white-space: nowrap;
+    text-align: left;
+}
+
+tr:hover {
+    background: #1f2a3b;
+}
+
+tr.selected {
+    background: #24324a;
+}
+
+.value-positive {
+    color: var(--positive);
+}
+
+.value-negative {
+    color: var(--negative);
+}
+
+.crop-thumb {
+    width: 68px;
+    height: 42px;
+    object-fit: cover;
+    border: 1px solid #3a4c66;
+}
+
+.right-panel {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-card {
+    border: 1px solid var(--line);
+    background: #141c26;
+    padding: 10px;
+    min-height: 260px;
+}
+
+.detail-card img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    border: 1px solid #3a4a61;
+    margin-bottom: 10px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    color: #d3e1f5;
+}
+
+.detail-placeholder {
+    color: var(--text-sub);
+}
+
+@media (max-width: 1200px) {
+    .app-shell {
+        grid-template-columns: 280px 1fr;
+    }
+
+    .right-panel {
+        grid-column: 1 / -1;
+    }
+
+    .table-wrap {
+        height: auto;
+        min-height: 360px;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .left-sidebar,
+    .main-panel,
+    .right-panel {
+        min-width: 0;
+    }
+}
