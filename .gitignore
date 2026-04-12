@@ -46,8 +46,6 @@ storage/uploads/*
 !storage/uploads/.gitkeep
 storage/history.db
 
-# Model binaries (large files)
-model/*.pt
 
 # Keep folder structure placeholders
 !storage/.gitkeep

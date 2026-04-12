@@ -31,32 +31,46 @@ class LicensePlateRecognizer:
     def __init__(self, detector_weight_path: Path, ocr_weight_path: Path) -> None:
         self.detector_weight_path: Path = detector_weight_path
         self.ocr_weight_path: Path = ocr_weight_path
-        self.detector_model, self.ocr_model = self._load_models()
+        # Lazy loading: models are loaded on first use, not at initialization
+        self.detector_model: Any | None = None
+        self.ocr_model: Any | None = None
+        self._models_loaded: bool = False
 
     def _load_models(self) -> tuple[Any, Any]:
-        """Load local custom YOLOv5 models; example: detector_model, ocr_model = self._load_models()."""
+        """Load local custom YOLOv5 models on demand; example: detector_model, ocr_model = self._load_models()."""
 
         if not self.detector_weight_path.exists():
-            raise FileNotFoundError(f"Detector weight không tồn tại: {self.detector_weight_path}")
+            raise FileNotFoundError(f"Detector weight file not found: {self.detector_weight_path}")
         if not self.ocr_weight_path.exists():
-            raise FileNotFoundError(f"OCR weight không tồn tại: {self.ocr_weight_path}")
+            raise FileNotFoundError(f"OCR weight file not found: {self.ocr_weight_path}")
 
+        print(f"Loading detector model from {self.detector_weight_path}...")
         detector_model: Any = torch.hub.load(
             "ultralytics/yolov5",
             "custom",
             path=str(self.detector_weight_path),
             force_reload=False,
         )
+        print(f"Loading OCR model from {self.ocr_weight_path}...")
         ocr_model: Any = torch.hub.load(
             "ultralytics/yolov5",
             "custom",
             path=str(self.ocr_weight_path),
             force_reload=False,
         )
+        self._models_loaded = True
         return detector_model, ocr_model
+
+    def _ensure_models_loaded(self) -> None:
+        """Ensure models are loaded before use (lazy loading pattern)."""
+        if not self._models_loaded:
+            self.detector_model, self.ocr_model = self._load_models()
 
     def detect_on_frame(self, frame: Any, frame_index: int, confidence_threshold: float = 0.2) -> list[PlateDetection]:
         """Detect license plates on a single frame; example: detections = recognizer.detect_on_frame(frame=image, frame_index=0)."""
+
+        # Ensure models are loaded before processing
+        self._ensure_models_loaded()
 
         predictions: Any = self.detector_model(frame)
         normalized_boxes = predictions.xyxyn[0][:, :-1]

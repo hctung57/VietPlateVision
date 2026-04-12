@@ -11,6 +11,4 @@ services:
       - ./model:/app/model
     environment:
       - TZ=Asia/Ho_Chi_Minh
-    devices:
-      - /dev/video0:/dev/video0
     restart: unless-stopped

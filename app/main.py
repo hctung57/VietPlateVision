@@ -36,10 +36,36 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 config: AppConfig = AppConfig.from_environment()
 
 realtime_hub = RealtimeHub()
-recognizer = LicensePlateRecognizer(
-    detector_weight_path=MODEL_DIR / "LP_detector.pt",
-    ocr_weight_path=MODEL_DIR / "LP_ocr.pt",
-)
+
+# Initialize recognizer lazily (on first use) to avoid startup failure if model weights are missing
+recognizer: LicensePlateRecognizer | None = None
+_recognizer_initialized: bool = False
+_recognizer_error: str | None = None
+
+
+def get_recognizer() -> LicensePlateRecognizer:
+    """Get or initialize the license plate recognizer on demand."""
+    global recognizer, _recognizer_initialized, _recognizer_error
+
+    if _recognizer_initialized:
+        if recognizer is not None:
+            return recognizer
+        else:
+            raise RuntimeError(f"Model initialization failed: {_recognizer_error}")
+
+    try:
+        recognizer = LicensePlateRecognizer(
+            detector_weight_path=MODEL_DIR / "LP_detector.pt",
+            ocr_weight_path=MODEL_DIR / "LP_ocr.pt",
+        )
+        _recognizer_initialized = True
+        return recognizer
+    except FileNotFoundError as e:
+        _recognizer_initialized = True
+        _recognizer_error = str(e)
+        raise RuntimeError(f"Required model files not found. {_recognizer_error}")
+
+
 history_store: HistoryStore | None = None
 if config.enable_history:
     # Initialize DB connection only when persistence is enabled via environment variables.
@@ -63,7 +89,20 @@ def publish_detection(payload: dict[str, Any]) -> None:
         )
 
 
-processing_manager = ProcessingManager(recognizer=recognizer, on_detection=publish_detection)
+# Initialize processing manager lazily with proper error handling
+processing_manager_instance: ProcessingManager | None = None
+
+
+def get_processing_manager() -> ProcessingManager:
+    """Get or initialize the processing manager on demand."""
+    global processing_manager_instance
+
+    if processing_manager_instance is None:
+        processing_manager_instance = ProcessingManager(
+            recognizer=get_recognizer(),
+            on_detection=publish_detection
+        )
+    return processing_manager_instance
 
 app = FastAPI(title="VietPlateVision Dashboard", version="2.0.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -124,11 +163,11 @@ async def get_history_item(detection_id: int) -> JSONResponse:
     """Return one detection record when persistence is enabled; example: GET /api/history/10."""
 
     if history_store is None:
-        raise HTTPException(status_code=503, detail="History persistence đang tắt (ENABLE_HISTORY=false)")
+        raise HTTPException(status_code=503, detail="History persistence is disabled (ENABLE_HISTORY=false)")
 
     record: DetectionRecord | None = history_store.get_detection(detection_id=detection_id)
     if record is None:
-        raise HTTPException(status_code=404, detail="Không tìm thấy bản ghi detect")
+        raise HTTPException(status_code=404, detail="Detection record not found")
 
     payload: dict[str, Any] = HistoryStore.serialize(record)
     payload["crop_data_url"] = payload.pop("crop_path")
@@ -139,7 +178,7 @@ async def get_history_item(detection_id: int) -> JSONResponse:
 async def list_jobs() -> JSONResponse:
     """Return current status of processing jobs; example: GET /api/jobs."""
 
-    jobs: list[JobStatus] = processing_manager.list_jobs()
+    jobs: list[JobStatus] = get_processing_manager().list_jobs()
     payload: list[dict[str, Any]] = [
         {
             "job_id": job.job_id,
@@ -159,10 +198,10 @@ async def list_jobs() -> JSONResponse:
 async def stop_job(job_id: str) -> JSONResponse:
     """Stop a running job; example: POST /api/jobs/<job_id>/stop."""
 
-    stopped: bool = processing_manager.stop_job(job_id=job_id)
+    stopped: bool = get_processing_manager().stop_job(job_id=job_id)
     if not stopped:
-        raise HTTPException(status_code=404, detail="Job không tồn tại")
-    return JSONResponse(content={"message": "Đã gửi yêu cầu dừng job", "job_id": job_id})
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JSONResponse(content={"message": "Stop request sent for job", "job_id": job_id})
 
 
 @app.post("/api/process/image")
@@ -170,13 +209,13 @@ async def process_image(file: UploadFile = File(...)) -> JSONResponse:
     """Process uploaded image and stream realtime detections; example: POST /api/process/image with multipart file."""
 
     if file.filename is None or file.filename == "":
-        raise HTTPException(status_code=400, detail="Thiếu tên file ảnh")
+        raise HTTPException(status_code=400, detail="Missing image filename")
 
     content: bytes = await file.read()
-    detections: list[dict[str, Any]] = processing_manager.process_image_bytes(image_bytes=content, source_name=file.filename)
+    detections: list[dict[str, Any]] = get_processing_manager().process_image_bytes(image_bytes=content, source_name=file.filename)
     return JSONResponse(
         content={
-            "message": "Đã xử lý ảnh",
+            "message": "Image processed",
             "source_type": "image",
             "source_name": file.filename,
             "detections": detections,
@@ -193,21 +232,21 @@ async def process_video(
     """Start a background job for uploaded video; example: POST /api/process/video with video file and sample_interval."""
 
     if file.filename is None or file.filename == "":
-        raise HTTPException(status_code=400, detail="Thiếu tên file video")
+        raise HTTPException(status_code=400, detail="Missing video filename")
 
     safe_filename: str = Path(file.filename).name
     target_path: Path = UPLOAD_DIR / f"{uuid4().hex}_{safe_filename}"
     content: bytes = await file.read()
     target_path.write_bytes(content)
 
-    job_id: str = processing_manager.start_video_job(
+    job_id: str = get_processing_manager().start_video_job(
         video_path=target_path,
         source_name=file.filename,
         sample_interval=sample_interval,
     )
     return JSONResponse(
         content={
-            "message": "Đã khởi chạy job video",
+            "message": "Video job started",
             "job_id": job_id,
             "source_type": "video",
             "source_name": file.filename,
@@ -225,16 +264,16 @@ async def process_stream(
 
     cleaned_url: str = stream_url.strip()
     if cleaned_url == "":
-        raise HTTPException(status_code=400, detail="stream_url không hợp lệ")
+        raise HTTPException(status_code=400, detail="Invalid stream URL")
 
-    job_id: str = processing_manager.start_stream_job(
+    job_id: str = get_processing_manager().start_stream_job(
         stream_url=cleaned_url,
         source_name=source_name,
         sample_interval=sample_interval,
     )
     return JSONResponse(
         content={
-            "message": "Đã khởi chạy job stream",
+            "message": "Stream job started",
             "job_id": job_id,
             "source_type": "stream",
             "source_name": source_name,
@@ -249,13 +288,13 @@ async def process_webcam(
 ) -> JSONResponse:
     """Start a background job for local webcam; example: POST /api/process/webcam with camera_index=0."""
 
-    job_id: str = processing_manager.start_webcam_job(
+    job_id: str = get_processing_manager().start_webcam_job(
         camera_index=camera_index,
         sample_interval=sample_interval,
     )
     return JSONResponse(
         content={
-            "message": "Đã khởi chạy job webcam",
+            "message": "Webcam job started",
             "job_id": job_id,
             "source_type": "webcam",
             "source_name": f"webcam-{camera_index}",
