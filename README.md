@@ -38,14 +38,6 @@ app/
 	templates/index.html    # Dashboard UI
 	static/css/dashboard.css
 	static/js/dashboard.js
-training/
-	configs/
-		custom_data.yaml
-		Letter_detect.yaml
-	notebooks/
-		License_plate_training.ipynb
-		Letter_detection.ipynb
-	README.md               # Detailed training guide
 storage/
 	uploads/                # Temporary uploaded files
 lp_location.py            # Server entrypoint
@@ -62,17 +54,6 @@ Place these 2 weight files in:
 - `model/LP_ocr.pt`
 
 The app reads exactly these two paths by default.
-
-## 3.1) Training Folder Layout
-
-Training assets are split into two clear groups:
-
-- `training/notebooks/`: training notebooks.
-- `training/configs/`: YAML files for dataset/training configs.
-
-See detailed instructions at:
-
-- `training/README.md`
 
 ## 4) Run Locally (without Docker)
 

@@ -45,21 +45,33 @@ class LicensePlateRecognizer:
             raise FileNotFoundError(f"OCR weight file not found: {self.ocr_weight_path}")
 
         print(f"Loading detector model from {self.detector_weight_path}...")
-        detector_model: Any = torch.hub.load(
-            "ultralytics/yolov5",
-            "custom",
-            path=str(self.detector_weight_path),
-            force_reload=False,
-        )
+        detector_model: Any = self._load_yolov5_custom_model(self.detector_weight_path)
         print(f"Loading OCR model from {self.ocr_weight_path}...")
-        ocr_model: Any = torch.hub.load(
-            "ultralytics/yolov5",
-            "custom",
-            path=str(self.ocr_weight_path),
-            force_reload=False,
-        )
+        ocr_model: Any = self._load_yolov5_custom_model(self.ocr_weight_path)
         self._models_loaded = True
         return detector_model, ocr_model
+
+    def _load_yolov5_custom_model(self, weight_path: Path) -> Any:
+        """Load one custom YOLOv5 model from a local weight file; example: model = self._load_yolov5_custom_model(Path('model/LP_detector.pt'))."""
+
+        load_kwargs: dict[str, Any] = {
+            "path": str(weight_path),
+            "force_reload": False,
+        }
+        try:
+            return torch.hub.load(
+                "ultralytics/yolov5",
+                "custom",
+                trust_repo=True,
+                **load_kwargs,
+            )
+        except TypeError:
+            # Tương thích với các phiên bản torch cũ hơn chưa hỗ trợ trust_repo.
+            return torch.hub.load(
+                "ultralytics/yolov5",
+                "custom",
+                **load_kwargs,
+            )
 
     def _ensure_models_loaded(self) -> None:
         """Ensure models are loaded before use (lazy loading pattern)."""
